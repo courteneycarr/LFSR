@@ -1,31 +1,30 @@
 # Implementing LFSR in python
-
-def setBit(value,index):
-    mask = 1 << index
-    return(value | mask)
-
-def getBit(value,index):
-    mask = 1 << index
-    return(value & mask)
-
-def LFSR(tap1,tap2,tap3,IV,no_bit):
+#Method takes integer tap values an initialization vector 
+# and a desired output length as inputs. The output is the generated stream
+def LFSR(tap1,tap2,tap3,tap4,IV,no_bit):
+    outBit = []
+    IV = IV & 0xffffffff
     for i in range(no_bit):
-        bit1 = 1 & getBit(IV,(31-tap1))
-        bit2 = 1 & getBit(IV,(31-tap2))
-        bit3 = getBit(IV,(31-tap3))
-        IV = IV << 1
-        if (bit1 ^ bit2) ^ bit3:
-            IV = setBit(IV,0)
-    return IV
-        
-bitSeq1 = 3402409650    #0b11001010110011001010011010110010
-bitSeq2 = 921867418     #0b00110110111100101001010010011010
-    
-lfsr1 = LFSR(1,3,31,bitSeq1,10)
-lfsr2 = LFSR(2,5,27,bitSeq2,10)
-outputStream = lfsr1 ^ lfsr2
-plaintext = 1026552546
-cipher = plaintext ^ outputStream
-print(cipher)
+        #IV = IV << 1 & 0xffffffff
+        # The output bit is gotten by ANDing the current state of the lfsr
+        # and 1 to isolate the leftmost bit
+        outBit.append((IV & (1 << 31)) >> 31)   #Append the output bit to list
+        #t is the result of XORing all taps
+        t = (IV >> (tap4-1)) ^ (IV >> (tap3-1)) ^ (IV >> (tap2 - 1)) ^ (IV >> (tap1 -1))
+        # The XOR value is ORed with the current state of the register.
+        # This acts like an if statement. A zero in the tap will produce 
+        IV = (IV << 1) | (t & 1)
+    return outBit
+
+# This method takes initialisation vectors and desired length and 
+# uses these to generate two 32 bit LFSRs using the LFSR method
+# The output of the LFSRs are XORed to produce the key stream for the cipher
+def stream(iv,l):#Takes input in the form of
+    lfsr1 = LFSR(1,5,6,31,iv[0],l)
+    lfsr2 = LFSR(1,2,22,32,iv[1],l)
+    outputStream = []
+    for i in range(l):
+        outputStream.append(lfsr1[i] ^ lfsr2[i])
+    return outputStream
 
 
